@@ -15,7 +15,6 @@ from ..exceptions import (
 )
 from ..mappers.book_mapper import BookMapper
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +87,18 @@ class BookService:
         if existing is None:
             raise BookNotFoundException(book_id)
 
+        # Подготавливаем только переданные поля
+        update_data = book_data.model_dump(exclude_unset=True)
+
+        # Проверяем уникальность ISBN, если он изменяется
+        new_isbn = update_data.get("isbn")
+
+        if new_isbn is not None and new_isbn != existing.isbn:
+            isbn_book = await self.book_repo.find_by_isbn(new_isbn)
+
+            if isbn_book is not None and isbn_book.book_id != book_id:
+                raise BookAlreadyExistsException(new_isbn)
+
         # Проверяем год и количество страниц, если они переданы
         if book_data.year is not None:
             self._validate_year(book_data.year)
@@ -98,8 +109,11 @@ class BookService:
         # Обновляем только переданные поля
         updated = await self.book_repo.update(
             book_id,
-            **book_data.model_dump(exclude_unset=True),
+            **update_data,
         )
+
+        if updated is None:
+            raise BookNotFoundException(book_id)
 
         return BookMapper.to_show_book(updated)
 
