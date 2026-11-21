@@ -32,7 +32,7 @@ class BookRepository(BaseRepository[Book]):
             stmt = stmt.where(Book.author.ilike(f"%{author}%"))
 
         if genre is not None:
-            stmt = stmt.where(Book.genre.ilike(f"%{genre}%"))
+            stmt = stmt.where(Book.genre == genre)
 
         if year is not None:
             stmt = stmt.where(Book.year == year)
@@ -74,7 +74,7 @@ class BookRepository(BaseRepository[Book]):
             stmt = stmt.where(Book.author.ilike(f"%{author}%"))
 
         if genre is not None:
-            stmt = stmt.where(Book.genre.ilike(f"%{genre}%"))
+            stmt = stmt.where(Book.genre == genre)
 
         if year is not None:
             stmt = stmt.where(Book.year == year)
