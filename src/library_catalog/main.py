@@ -1,0 +1,115 @@
+"""
+Library Catalog API - Точка входа приложения.
+"""
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .api.dependencies import get_openlibrary_client
+from .api.v1.routers import books, health
+from .core.config import settings
+from .core.database import dispose_engine
+from .core.exceptions import register_exception_handlers
+from .core.logging_config import setup_logging
+
+# ========== LIFECYCLE EVENTS ==========
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifecycle manager для FastAPI.
+
+    Startup:
+        Настройка логирования.
+
+    Shutdown:
+        Закрытие HTTP-клиента Open Library и подключений к БД.
+    """
+    setup_logging()
+    print("🚀 Application started")
+
+    yield
+
+    try:
+        # Закрываем OpenLibraryClient, если он был создан.
+        if get_openlibrary_client.cache_info().currsize:
+            await get_openlibrary_client().close()
+    finally:
+        # Очищаем singleton-кэш.
+        get_openlibrary_client.cache_clear()
+
+        # Закрываем подключения к БД.
+        await dispose_engine()
+
+    print("👋 Application stopped")
+
+
+# ========== CREATE APP ==========
+
+app = FastAPI(
+    title=settings.app_name,
+    description="REST API для управления библиотечным каталогом",
+    version="1.0.0",
+    docs_url=settings.docs_url,
+    redoc_url=settings.redoc_url,
+    lifespan=lifespan,
+)
+
+
+# ========== MIDDLEWARE ==========
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ========== EXCEPTION HANDLERS ==========
+
+register_exception_handlers(app)
+
+
+# ========== ROUTERS ==========
+
+app.include_router(
+    books.router,
+    prefix=settings.api_v1_prefix,
+)
+
+app.include_router(
+    health.router,
+    prefix=settings.api_v1_prefix,
+)
+
+
+# ========== ROOT ENDPOINT ==========
+
+
+@app.get("/")
+async def root():
+    """Корневой эндпоинт приложения."""
+
+    return {
+        "message": "Welcome to Library Catalog API",
+        "docs": settings.docs_url,
+        "version": "1.0.0",
+    }
+
+
+# ========== RUN ==========
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "library_catalog.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+    )
