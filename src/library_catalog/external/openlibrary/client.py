@@ -1,11 +1,11 @@
 import httpx
 from pydantic import ValidationError
 
-from ..base.base_client import BaseApiClient
 from ...domain.exceptions import (
     OpenLibraryException,
     OpenLibraryTimeoutException,
 )
+from ..base.base_client import BaseApiClient
 from .schemas import OpenLibrarySearchResponse
 
 
@@ -40,9 +40,7 @@ class OpenLibraryClient(BaseApiClient):
             if not response.docs:
                 return {}
 
-            return self._extract_book_data(
-                response.docs[0].model_dump()
-            )
+            return self._extract_book_data(response.docs[0].model_dump())
 
         except httpx.TimeoutException as e:
             raise OpenLibraryTimeoutException(self.timeout) from e
@@ -72,9 +70,7 @@ class OpenLibraryClient(BaseApiClient):
             if not response.docs:
                 return {}
 
-            return self._extract_book_data(
-                response.docs[0].model_dump()
-            )
+            return self._extract_book_data(response.docs[0].model_dump())
 
         except httpx.TimeoutException as e:
             raise OpenLibraryTimeoutException(self.timeout) from e
@@ -144,6 +140,4 @@ class OpenLibraryClient(BaseApiClient):
         if not cover_id:
             return None
 
-        return (
-            f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
-        )
+        return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"

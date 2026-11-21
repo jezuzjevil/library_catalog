@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 
 import httpx
 
@@ -37,7 +37,6 @@ class BaseApiClient(ABC):
     @abstractmethod
     def client_name(self) -> str:
         """Имя клиента для логирования."""
-        pass
 
     def _build_url(self, path: str) -> str:
         """Построить полный URL."""
@@ -67,9 +66,7 @@ class BaseApiClient(ABC):
 
         for attempt in range(self.retries):
             try:
-                self.logger.debug(
-                    f"{method} {url} params={params}"
-                )
+                self.logger.debug(f"{method} {url} params={params}")
 
                 response = await self._client.request(
                     method=method,
@@ -85,30 +82,21 @@ class BaseApiClient(ABC):
 
             except httpx.TimeoutException:
                 if attempt == self.retries - 1:
-                    self.logger.error(
-                        f"Timeout after {self.retries} attempts"
-                    )
+                    self.logger.error(f"Timeout after {self.retries} attempts")
                     raise
 
-                wait_time = self.backoff * (2 ** attempt)
+                wait_time = self.backoff * (2**attempt)
 
-                self.logger.warning(
-                    f"Timeout, retrying in {wait_time}s..."
-                )
+                self.logger.warning(f"Timeout, retrying in {wait_time}s...")
 
                 await asyncio.sleep(wait_time)
 
             except httpx.HTTPStatusError as e:
                 # Повторяем запрос только при ошибках сервера (5xx)
-                if (
-                    e.response.status_code >= 500
-                    and attempt < self.retries - 1
-                ):
-                    wait_time = self.backoff * (2 ** attempt)
+                if e.response.status_code >= 500 and attempt < self.retries - 1:
+                    wait_time = self.backoff * (2**attempt)
 
-                    self.logger.warning(
-                        f"Server error, retrying in {wait_time}s..."
-                    )
+                    self.logger.warning(f"Server error, retrying in {wait_time}s...")
 
                     await asyncio.sleep(wait_time)
 
